@@ -14,6 +14,8 @@ Discover candidates in this order:
 4. Read environment configuration for candidates and role descriptions. Treat configuration as a hint until native delegation verifies it.
 5. Accept selectors supplied by the user as candidates, then validate them through native delegation before assigning dependent work.
 
+Saved project and user preferences follow the same rule as selectors supplied for the current run: they enter the candidate set but do not prove availability, tier, effort support, or tool access.
+
 Do not use a public provider catalog as availability evidence; catalogs do not reflect the current surface, entitlement, region, policy, or authentication boundary. Provider documentation may establish tier after native availability is proven. Do not probe by calling provider APIs or shelling out to another coding agent. If the environment exposes no enumerable list, use its adapter's safe sources; if those still cannot prove availability, request the picker choices rather than pretending to auto-discover them.
 
 Record the result before routing:
@@ -65,6 +67,8 @@ Select models only after the inventory is complete:
 1. **Planning:** always use a coding-suitable frontier model. A current-only frontier model may plan in the coordinator; otherwise create a frontier planning child.
 2. **Execution:** choose the lowest-cost or lowest-latency workhorse that satisfies required tools, context, risk, and acceptance checks. Use a utility model only for a narrow deterministic slice. Use frontier execution when no workhorse qualifies.
 3. **Review:** choose the strongest coding-suitable frontier model that did not execute the work. Prefer a different model ID and family from the planner as well, because diversity reduces correlated blind spots. If only one frontier model exists, use a fresh context and disclose reduced diversity.
+
+Apply the preference precedence from [`PREFERENCES.md`](PREFERENCES.md) independently for each phase. A preference wins only when it passes that phase's availability, tier, effort, tool-access, and independence gates. Follow its configured `on_unavailable` behavior when it fails.
 
 Rank cost and latency only when the environment supplies credible metadata or the relative position is established by current provider guidance. Otherwise state that the workhorse suggestion optimizes for the provider's declared balanced tier, not a verified price comparison.
 

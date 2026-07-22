@@ -17,6 +17,7 @@ The user may supply any model map, for example:
 planning: Fable
 execution: GPT-5.5
 review: GPT-5.6 Sol
+save: project
 ```
 
 Model names are configuration, never capability claims. The coordinator discovers what the active environment can actually delegate to, classifies those models from current evidence, suggests the route, verifies every handoff, and reports the route actually used.
@@ -32,8 +33,9 @@ Run the relay only when the user explicitly invokes it or explicitly requests th
    - **Settled:** the solution and finish line are already known; planning may stay in the coordinator.
    - **Judgment-heavy:** implementation is tractable, but tradeoffs or failure modes need a planner.
    - **Open-ended:** the problem, architecture, or safe path must be discovered before execution.
-5. Read [`MODEL_SELECTION.md`](MODEL_SELECTION.md) completely. Use its discovery procedure to produce an evidence-backed inventory of every model selectable for child work, then classify each as **frontier**, **workhorse**, **utility**, or **unknown**. Availability discovery is complete only when every candidate has a native selector and evidence from the active environment—not merely a provider catalog or remembered model name.
-6. Respect explicit user choices when they are available. Otherwise auto-suggest the best role map from the inventory:
+5. Read [`PREFERENCES.md`](PREFERENCES.md) completely. Load user and project preferences from its defined paths when present. Treat saved selectors as preferences, never as availability or tier evidence.
+6. Read [`MODEL_SELECTION.md`](MODEL_SELECTION.md) completely. Use its discovery procedure to produce an evidence-backed inventory of every model selectable for child work, then classify each as **frontier**, **workhorse**, **utility**, or **unknown**. Availability discovery is complete only when every candidate has a native selector and evidence from the active environment—not merely a provider catalog, saved preference, or remembered model name.
+7. Choose each phase using this precedence: an explicit choice for the current run, then a valid saved project preference, then a valid saved user preference, then automatic suggestion. Validate every selected model against the current inventory and phase gate before routing.
 
 ```markdown
 | Role | Model | Effort | Why this model fits | Substitution |
@@ -44,6 +46,8 @@ Run the relay only when the user explicitly invokes it or explicitly requests th
 ```
 
 Show the inventory, classification confidence, and suggested map before launching children. Explicit invocation authorizes the skill to proceed with high-confidence selections. Pause when a required role has no qualifying model, a classification is low-confidence, or the suggestion conflicts with an explicit user choice.
+
+When the user asks to save or update preferred models, follow [`PREFERENCES.md`](PREFERENCES.md). Persistence is a separate file mutation: never infer permission to save from a one-run model choice. Report the saved scope and path after writing, and show which preferences were applied or bypassed during preflight.
 
 Use exact model IDs or documented native selectors and effort values exposed by the host. Never invent an identifier or silently substitute a model. Preflight passes when the finish line is checkable, every external side effect is authorized, and the planner and reviewer are genuine frontier models—not merely the strongest models in a weak inventory.
 
@@ -72,12 +76,23 @@ If deployment is in scope, read [`DEPLOYMENT.md`](DEPLOYMENT.md) completely befo
 
 Use the coding environment's native visible delegation controls. Do not shell out to another model runner or provider API to manufacture capabilities the environment did not expose.
 
+Before every delegation call, announce the assignment to the user. Name the phase, role, selected model or native selector, tier, effort, and reason for the choice. Do not create a child silently.
+
+```text
+Relay delegation — <phase>/<role>
+Model: <exact model ID or native selector> (<tier>, effort: <effort>)
+Why: <one concise reason this model fits>
+```
+
+When launching independent children in parallel, one compact table may announce the whole batch immediately before the calls, but it must include one row per child with its role, model, tier, effort, and assignment. After creation, report the returned child ID and verified model. If the verified model differs from the announcement, immediately announce the substitution, update the route, and reroute or stop according to the model gate.
+
 For each phase:
 
-1. Create a child with the configured native model selector, effort, prompt, and target.
-2. Record the returned child ID when the environment supplies one. Verify the actual model and effort through returned metadata or an authoritative native contract that guarantees an accepted exact selector is used and rejects unavailable values. A requested selector alone is not proof. Aliases and fallback-capable controls require resolved-model readback. If the environment silently substitutes, update the inventory and reroute; if it cannot verify actual model identity, stop rather than claim a model-specific relay.
-3. Wait for any pending workspace setup before starting dependent work.
-4. Give it a self-contained brief:
+1. Announce the configured role, native model selector, tier, effort, and assignment.
+2. Create a child with that selector, effort, prompt, and target.
+3. Record the returned child ID when the environment supplies one. Verify the actual model and effort through returned metadata or an authoritative native contract that guarantees an accepted exact selector is used and rejects unavailable values. A requested selector alone is not proof. Aliases and fallback-capable controls require resolved-model readback. Report the child ID and verified model. If the environment silently substitutes, announce the mismatch, update the inventory, and reroute; if it cannot verify actual model identity, stop rather than claim a model-specific relay.
+4. Wait for any pending workspace setup before starting dependent work.
+5. Give it a self-contained brief:
 
 ```markdown
 Role: <planner, executor, reviewer, or added phase>
@@ -88,9 +103,9 @@ Acceptance: <checks that prove this phase is done>
 Return: <artifact or concise handoff, including evidence and unresolved risks>
 ```
 
-5. Wait for the terminal result and inspect the returned artifact. Child creation is not completion.
-6. Correct incomplete work in the same child context so it retains role and context. Create a new child when responsibility moves to another role or model.
-7. Update the canonical route with the actual child ID, verified model, effort, artifact, and status.
+6. Wait for the terminal result and inspect the returned artifact. Child creation is not completion.
+7. Correct incomplete work in the same child context so it retains role and context. Create a new child when responsibility moves to another role or model, and announce that new delegation too.
+8. Update the canonical route with the actual child ID, verified model, effort, artifact, and status.
 
 Do not pass a summary forward as if it were the artifact. The next phase receives the actual plan, diff, test output, commit, or production evidence.
 
