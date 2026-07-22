@@ -1,0 +1,7 @@
+interface:
+  display_name: "Relay"
+  short_description: "Route work through specialized models"
+  default_prompt: "Use $relay to discover available child models and route this task through planning, execution, and independent review."
+
+policy:
+  allow_implicit_invocation: false

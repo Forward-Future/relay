@@ -1,6 +1,6 @@
 # Relay
 
-A model-agnostic coding-environment skill for discovering available models and routing one task through planning, execution, and independent review.
+A model-agnostic coding-environment skill for discovering available models and routing one task through frontier planning, workhorse execution, and independent frontier review.
 
 The relay first inventories the models that the active environment can actually delegate to, classifies them from current evidence, and then assigns each phase by capability and cost:
 
@@ -12,54 +12,25 @@ frontier planner
 
 For example: Fable plans, GPT-5.5 executes, and GPT-5.6 Sol reviews. Those names are configuration, not requirements. The route can use any models exposed by the host, and deployment is always a separate authorized phase.
 
-## Install
+## Install and invoke
 
-Copy `.agents/skills/relay/` into a project that supports Codex project skills. Then invoke it explicitly:
+| Environment | Project installation | Invocation |
+| --- | --- | --- |
+| Codex | `.agents/skills/relay/` | `$relay` |
+| Cursor | `.agents/skills/relay/` | `/relay` |
+| Claude Code | `.agents/skills/relay/` plus `.claude/skills/relay/` | `/relay` |
 
-```text
-Invoke /relay with this task: <task>
-```
+Keep the repository layout intact when installing. Codex and Cursor read the canonical skill directly; the Claude Code entrypoint loads that same implementation with host-compatible explicit-invocation metadata. Restart an environment if it does not detect the newly installed skill.
 
 The skill uses the coding environment's native visible delegation controls with explicit model and reasoning settings. It does not use hidden subprocesses or direct provider calls to manufacture unavailable capabilities.
 
 ## Discovery
 
-`relay` inspects the active environment's child-task or agent-spawn capabilities for exact selectable model IDs. Environment-native model lists and validated configuration can add evidence. Public provider catalogs and remembered model names never prove availability for the current account or surface.
-
-Each discovered model is classified as:
-
-| Tier | Meaning |
-| --- | --- |
-| Frontier | Highest-capability available tier for difficult planning, reasoning, diagnosis, and review |
-| Workhorse | Cost- or latency-balanced agentic coding tier for bounded implementation and tests |
-| Utility | Fast narrow-task tier for mechanical, checkable work |
-| Unknown | Selectable, but insufficient current evidence for automatic routing |
-
-The skill shows the inventory, evidence, confidence, and suggested route before launching child work. Low-confidence classifications require confirmation.
-
-## Model routing
-
-| Role | Selection rule |
-| --- | --- |
-| Planning | A frontier model suited to ambiguity, architecture, and hard diagnosis |
-| Execution | The cheapest, fastest available workhorse that can reliably implement the settled plan and pass its checks |
-| Review | A fresh frontier model, preferably different from both executor and planner |
-
-The user may provide all three choices. Otherwise the relay maps currently available model IDs and effort settings to these roles and discloses any substitution.
-
-## What the skill guarantees
-
-- Each child thread has one role, one deliverable, and one checkable gate.
-- A dependent child is not started until its required artifact exists.
-- Corrections stay in the same child thread; changing model responsibility creates a new child.
-- Review happens in a fresh thread that did not produce the implementation.
-- Only one thread writes to a checkout at a time.
-- Deployment follows the repository's clean integrated-main rules in `DEPLOYMENT.md`.
-- The final report names the discovered inventory, actual child IDs, models, efforts, artifacts, checks, and deployment evidence.
+`relay` inspects native child-task capabilities, distinguishes parent availability from child selectability, and verifies the actual model assigned to each child. Public provider catalogs and remembered names never prove current availability. See [`ENVIRONMENTS.md`](.agents/skills/relay/ENVIRONMENTS.md) for adapters and [`MODEL_SELECTION.md`](.agents/skills/relay/MODEL_SELECTION.md) for tier evidence and routing gates.
 
 ## Requirements
 
-The host must expose native controls for creating, inspecting, and continuing child work with selectable models. If it cannot enumerate models, the user must supply exact IDs. If it cannot select a model for child work, the skill stops instead of pretending that model routing happened.
+The host must expose native controls for selecting and verifying child models. Verification can be returned model metadata or a native contract that guarantees an accepted exact ID is used and rejects unsupported values. Aliases and fallback-capable selectors require resolved-model readback. When the host cannot verify the actual model, Relay stops instead of pretending that model routing happened.
 
 ## License
 
